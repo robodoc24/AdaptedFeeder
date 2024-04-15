@@ -22,10 +22,10 @@ int switchBeginningState = 0; //Should be Zero
 int switchAtMotorState = 0; //Should be Zero
 int stopButtonState = 0; //Should be Zero
 int resetState = 0; //Should be Zero
-int direction = -1; //Negative moves backwards while positive moves forward
+int direction = 1; //Negative moves backwards while positive moves forward
 bool startButton = false;
 
-const uint16_t StepPeriodUs = 25;// This period is the length of the delay between steps, which controls the
+const uint16_t StepPeriodUs = 10;// This period is the length of the delay between steps, which controls the
 // stepper motor's speed.  You can increase the delay to make the stepper motor
 // go slower.  If you decrease the delay, the stepper motor will go faster, but
 // there is a limit to how fast it can go before it starts missing steps.
@@ -56,7 +56,7 @@ void setup()
 
   // Enable the motor outputs.
   sd.enableDriver();
-  sd.setDirection(0);
+  //sd.setDirection(0);
 }
 
 void loop()
@@ -69,17 +69,19 @@ void loop()
   stopButtonState = digitalRead(stopButton);
  
   //Start of the motor state
+  //direction(0) goes away from motor
+  //direction(1) goes towards motor
   if(stopButtonState == LOW) //If the Stop Button is not pressed so its normal state
   {
     if(startButton == false) //Before Start button is pressed or after whole cycle or after stop button it will return here
      {
       if(switchBeginningState == HIGH)// this is what sets up the motor moving reading where it is at 
       {
-        if(buttonState == HIGH)
+        if(buttonState == HIGH)//button hit
         {
           startButton = true;
           direction = -1;
-          sd.setDirection(1);
+          sd.setDirection(0);
           Serial.println("ButtonPressed"); //Here for debugging
         }
       }
@@ -87,27 +89,38 @@ void loop()
         startButton = true;
         direction = 0;
         Serial.println("Reset Hit"); //Here for debugging
+        sd.setDirection(1);
       }
      }
      else //When the Start Button is pressed
      {
       if(direction < 0)
       {
-        if(switchAtMotorState == HIGH) //Move towards the beginning point
+        if(switchAtMotorState == HIGH) //Move towards the motor point
         {
           direction = 1;
           Serial.println("SwitchAtMotor Switched directions"); //Here for debugging
           Serial.println("Going Back"); //Here for debugging
-          sd.setDirection(0);
-          delay(500); //The delay for the motor before returning to beginning point
+          sd.setDirection(1);
+        }
+        else 
+        {
+          sd.step(); //this moves the motor
+          delayMicroseconds(StepPeriodUs); //How fast the motor is moving
         }
       }
-      else if(direction = 0) //Return to Start from restart button
+      else if(direction == 0) //Return to Start from restart button
       {
-        if(switchAtMotorState == LOW && switchAtMotorState == LOW){
+        if(switchBeginningState == HIGH){
           direction = -1;
           Serial.println("Resetting"); //Here for debugging
-          sd.setDirection(0);
+          sd.setDirection(1);
+          startButton = false;
+        }
+        else
+        {
+          sd.step(); //this moves the motor
+          delayMicroseconds(StepPeriodUs); //How fast the motor is moving
         }
       }
       else
@@ -116,13 +129,17 @@ void loop()
         {
           startButton= false;
           direction = -1;
-          Serial.print("Stop"); //Here for debugging
-          sd.setDirection(1);
+          //Serial.print("Stop"); //Here for debugging
+          sd.setDirection(0);
           Serial.println("Going Forward"); //Here for debugging
         }
-      }
-      sd.step(); //this moves the motor
-      delayMicroseconds(StepPeriodUs); //How fast the motor is moving
+        else 
+        {
+          sd.step(); //this moves the motor
+          delayMicroseconds(StepPeriodUs); //How fast the motor is moving
+
+        }
+      }      
     }
   }
   else //If the stop button is pressed
